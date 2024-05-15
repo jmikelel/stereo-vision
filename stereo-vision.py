@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 
+
 def read_parse_images()->argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument('--l_img', 
@@ -173,6 +174,41 @@ def plot_3d_reconstruction(left_xyz, right_xyz):
     ax2.set_xlabel('X')
     ax2.set_ylabel('Y')
     ax2.set_zlabel('Z')
+
+    grid_x_left = np.linspace(np.min(left_xyz[:, 0]), np.max(left_xyz[:, 0]), 100)
+    grid_y_left = np.linspace(np.min(left_xyz[:, 1]), np.max(left_xyz[:, 1]), 100)
+    grid_z_left = np.zeros((len(grid_x_left), len(grid_y_left)))
+
+    for i in range(len(grid_x_left)):
+        for j in range(len(grid_y_left)):
+            x = grid_x_left[i]
+            y = grid_y_left[j]
+            z = left_xyz[(left_xyz[:, 0] == x) & (left_xyz[:, 1] == y), 2]
+            if len(z) > 0:
+                grid_z_left[i, j] = z[0]
+
+    X_left, Y_left = np.meshgrid(grid_x_left, grid_y_left)
+    ax1.plot_surface(X_left, Y_left, grid_z_left, alpha=0.5, cmap='viridis')
+
+    # Surface plot for right image
+    grid_x_right = np.linspace(np.min(right_xyz[:, 0]), np.max(right_xyz[:, 0]), 100)
+    grid_y_right = np.linspace(np.min(right_xyz[:, 1]), np.max(right_xyz[:, 1]), 100)
+    grid_z_right = np.zeros((len(grid_x_right), len(grid_y_right)))
+
+    for i in range(len(grid_x_right)):
+        for j in range(len(grid_y_right)):
+            x = grid_x_right[i]
+            y = grid_y_right[j]
+            z = right_xyz[(right_xyz[:, 0] == x) & (right_xyz[:, 1] == y), 2]
+            if len(z) > 0:
+                grid_z_right[i, j] = z[0]
+
+    X_right, Y_right = np.meshgrid(grid_x_right, grid_y_right)
+    ax2.plot_surface(X_right, Y_right, grid_z_right, alpha=0.5, cmap='viridis')
+
+    plt.show()
+
+
 
     plt.show()
 
