@@ -15,6 +15,7 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.tri as mtri
 
 
 
@@ -46,57 +47,59 @@ def display_images(left_image_path: str, right_image_path: str):
     cv.waitKey(0)
     cv.destroyAllWindows()
 
+
+def on_mouse_click(event, x, y, flags, param):
+    left_img, right_img = param["images"]
+    left_coords, right_coords = param["coords"]
+    
+    if event == cv.EVENT_LBUTTONDOWN:
+        if param["side"] == 'left':
+            if len(left_coords) >= 30:
+                draw_message("You have made your 30 clicks, proceed with the next 30 in the other image")
+            else:
+                left_coords.append((x, y))
+                draw_message(f"Left image: {30 - len(left_coords)} clicks left")
+        elif param["side"] == 'right':
+            if len(left_coords) < 30:
+                draw_message("Please click 30 times on the left image first.")
+            else:
+                if len(right_coords) >= 30:
+                    draw_message("You have made your 30 clicks, proceed with the next steps.")
+                else:
+                    right_coords.append((x, y))
+                    draw_message(f"Right image: {30 - len(right_coords)} clicks left")
+
+        draw_red_dot(param["side"], (x, y), left_img, right_img)
+
+
+def draw_message(message):
+    message_window = np.zeros((100, 800, 3), dtype=np.uint8)
+    cv.putText(message_window, message, (20, 50), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv.LINE_AA)
+    cv.imshow("Message", message_window)
+
+
+def draw_red_dot(image_name, point, left_img, right_img):
+    image = left_img if image_name == 'left' else right_img
+    cv.circle(image, point, 5, (0, 0, 255), -1)
+    cv.imshow("Left Image" if image_name == 'left' else "Right Image", image)
+
+
 def collect_coordinates(left_image_path: str, right_image_path: str):
     left_coords = []
     right_coords = []
 
-    def on_mouse_click(event, x, y, flags, param):
-        nonlocal left_coords, right_coords
-
-        if event == cv.EVENT_LBUTTONDOWN:
-            if param == 'left':
-                if len(left_coords) >= 30:
-                    draw_message("You have made your 30 clicks, proceed with the next 30 in the other image")
-                else:
-                    left_coords.append((x, y))
-                    draw_message(f"Left image: {30 - len(left_coords)} clicks left")
-            elif param == 'right':
-                if len(left_coords) < 30:
-                    draw_message("Please click 30 times on the left image first.")
-                else:
-                    if len(right_coords) >= 30:
-                        draw_message("You have made your 30 clicks, proceed with the next steps.")
-                    else:
-                        right_coords.append((x, y))
-                        draw_message(f"Right image: {30 - len(right_coords)} clicks left")
-
-            draw_red_dot(param, (x, y))
-
-    def draw_message(message):
-        message_window = np.zeros((100, 800, 3), dtype=np.uint8)
-        cv.putText(message_window, message, (20, 50), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv.LINE_AA)
-        cv.imshow("Message", message_window)
-
-    def draw_red_dot(image_name, point):
-        image = left_img if image_name == 'left' else right_img
-        cv.circle(image, point, 5, (0, 0, 255), -1)
-        cv.imshow("Left Image" if image_name == 'left' else "Right Image", image)
-
-    # Load images
     left_img = cv.imread(left_image_path)
     right_img = cv.imread(right_image_path)
 
-    # Check if images are loaded successfully
     if left_img is None or right_img is None:
         print("Error: Could not read the images.")
-        return
+        return [], []
 
-    # Display images and collect coordinates
     cv.imshow("Left Image", left_img)
     cv.imshow("Right Image", right_img)
 
-    cv.setMouseCallback("Left Image", on_mouse_click, 'left')
-    cv.setMouseCallback("Right Image", on_mouse_click, 'right')
+    cv.setMouseCallback("Left Image", on_mouse_click, {"side": 'left', "images": (left_img, right_img), "coords": (left_coords, right_coords)})
+    cv.setMouseCallback("Right Image", on_mouse_click, {"side": 'right', "images": (left_img, right_img), "coords": (left_coords, right_coords)})
 
     print("Click 30 times on the left image and 30 times on the right image.")
 
@@ -114,7 +117,7 @@ def collect_coordinates(left_image_path: str, right_image_path: str):
 
 def compute_xyz(left_coords, right_coords):
     camera_params = {
-        "baseline": -94.926,
+        "baseline": 94.926,
         "rectified_fx": 648.52,
         "rectified_fy": 648.52,
         "rectified_cx": 635.709,
@@ -147,11 +150,16 @@ def compute_xyz(left_coords, right_coords):
         left_xyz.append((Xl, Yl, Z))
         right_xyz.append((Xr, Yr, Z))
 
+    return left_xyz,right_xyz
+
+def print_coordinates(left_coords, right_coords,left_xyz,right_xyz):
+    print("LEFT COORDS || RIGHT COORDS")
+    for left, right in zip(left_coords, right_coords):
+        print(f"{left} || {right}")
     print("LEFT IMAGE XYZ || RIGHT IMAGE XYZ")
     for l_xyz, r_xyz in zip(left_xyz, right_xyz):
         print(f"{l_xyz} || {r_xyz}")
-
-    return left_xyz,right_xyz
+    
 
 
 def plot_3d_reconstruction(left_xyz, right_xyz):
@@ -175,40 +183,17 @@ def plot_3d_reconstruction(left_xyz, right_xyz):
     ax2.set_ylabel('Y')
     ax2.set_zlabel('Z')
 
-    grid_x_left = np.linspace(np.min(left_xyz[:, 0]), np.max(left_xyz[:, 0]), 100)
-    grid_y_left = np.linspace(np.min(left_xyz[:, 1]), np.max(left_xyz[:, 1]), 100)
-    grid_z_left = np.zeros((len(grid_x_left), len(grid_y_left)))
+    # Create triangulation for left image
+    left_tri = mtri.Triangulation(left_xyz[:, 0], left_xyz[:, 1])
 
-    for i in range(len(grid_x_left)):
-        for j in range(len(grid_y_left)):
-            x = grid_x_left[i]
-            y = grid_y_left[j]
-            z = left_xyz[(left_xyz[:, 0] == x) & (left_xyz[:, 1] == y), 2]
-            if len(z) > 0:
-                grid_z_left[i, j] = z[0]
+    # Plot left surface
+    ax1.plot_trisurf(left_tri, left_xyz[:, 2], cmap='viridis', alpha=0.5, edgecolor='black')
 
-    X_left, Y_left = np.meshgrid(grid_x_left, grid_y_left)
-    ax1.plot_surface(X_left, Y_left, grid_z_left, alpha=0.5, cmap='viridis')
+    # Create triangulation for right image
+    right_tri = mtri.Triangulation(right_xyz[:, 0], right_xyz[:, 1])
 
-    # Surface plot for right image
-    grid_x_right = np.linspace(np.min(right_xyz[:, 0]), np.max(right_xyz[:, 0]), 100)
-    grid_y_right = np.linspace(np.min(right_xyz[:, 1]), np.max(right_xyz[:, 1]), 100)
-    grid_z_right = np.zeros((len(grid_x_right), len(grid_y_right)))
-
-    for i in range(len(grid_x_right)):
-        for j in range(len(grid_y_right)):
-            x = grid_x_right[i]
-            y = grid_y_right[j]
-            z = right_xyz[(right_xyz[:, 0] == x) & (right_xyz[:, 1] == y), 2]
-            if len(z) > 0:
-                grid_z_right[i, j] = z[0]
-
-    X_right, Y_right = np.meshgrid(grid_x_right, grid_y_right)
-    ax2.plot_surface(X_right, Y_right, grid_z_right, alpha=0.5, cmap='viridis')
-
-    plt.show()
-
-
+    # Plot right surface
+    ax2.plot_trisurf(right_tri, right_xyz[:, 2], cmap='viridis', alpha=0.5, edgecolor='black')
 
     plt.show()
 
@@ -216,5 +201,6 @@ if __name__ == "__main__":
     args = read_parse_images()
     left_coords, right_coords = collect_coordinates(args.l_img, args.r_img)
     left_xyz, right_xyz = compute_xyz(left_coords, right_coords)
+    print_coordinates(left_coords, right_coords,left_xyz,right_xyz)
     compute_xyz(left_coords, right_coords)
     plot_3d_reconstruction(left_xyz, right_xyz)
