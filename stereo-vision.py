@@ -14,6 +14,7 @@ import cv2 as cv
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 
 def read_parse_images()->argparse.ArgumentParser:
@@ -149,7 +150,35 @@ def compute_xyz(left_coords, right_coords):
     for l_xyz, r_xyz in zip(left_xyz, right_xyz):
         print(f"{l_xyz} || {r_xyz}")
 
+    return left_xyz,right_xyz
+
+
+def plot_3d_reconstruction(left_xyz, right_xyz):
+    fig = plt.figure(figsize=(10, 5))
+    ax1 = fig.add_subplot(121, projection='3d')
+    ax2 = fig.add_subplot(122, projection='3d')
+
+    # Plot left reconstruction
+    left_xyz = np.array(left_xyz)
+    ax1.scatter(left_xyz[:, 0], left_xyz[:, 1], left_xyz[:, 2], c='r', marker='o')
+    ax1.set_title('Left Image 3D Reconstruction')
+    ax1.set_xlabel('X')
+    ax1.set_ylabel('Y')
+    ax1.set_zlabel('Z')
+
+    # Plot right reconstruction
+    right_xyz = np.array(right_xyz)
+    ax2.scatter(right_xyz[:, 0], right_xyz[:, 1], right_xyz[:, 2], c='b', marker='o')
+    ax2.set_title('Right Image 3D Reconstruction')
+    ax2.set_xlabel('X')
+    ax2.set_ylabel('Y')
+    ax2.set_zlabel('Z')
+
+    plt.show()
+
 if __name__ == "__main__":
     args = read_parse_images()
     left_coords, right_coords = collect_coordinates(args.l_img, args.r_img)
+    left_xyz, right_xyz = compute_xyz(left_coords, right_coords)
     compute_xyz(left_coords, right_coords)
+    plot_3d_reconstruction(left_xyz, right_xyz)
