@@ -183,24 +183,16 @@ def plot_3d_reconstruction(left_xyz, right_xyz):
     ax2.set_ylabel('Y')
     ax2.set_zlabel('Z')
 
-    # Create triangulation for left image
-    left_tri = mtri.Triangulation(left_xyz[:, 0], left_xyz[:, 1])
-
-    # Plot left surface
-    ax1.plot_trisurf(left_tri, left_xyz[:, 2], cmap='viridis', alpha=0.5, edgecolor='black')
-
-    # Create triangulation for right image
-    right_tri = mtri.Triangulation(right_xyz[:, 0], right_xyz[:, 1])
-
-    # Plot right surface
-    ax2.plot_trisurf(right_tri, right_xyz[:, 2], cmap='viridis', alpha=0.5, edgecolor='black')
-
     plt.show()
 
-if __name__ == "__main__":
+
+def run_pipeline():
     args = read_parse_images()
     left_coords, right_coords = collect_coordinates(args.l_img, args.r_img)
     left_xyz, right_xyz = compute_xyz(left_coords, right_coords)
     print_coordinates(left_coords, right_coords,left_xyz,right_xyz)
-    compute_xyz(left_coords, right_coords)
     plot_3d_reconstruction(left_xyz, right_xyz)
+
+
+if __name__ == "__main__":
+    run_pipeline()
