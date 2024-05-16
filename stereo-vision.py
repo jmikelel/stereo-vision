@@ -237,7 +237,6 @@ def print_coordinates(left_coords, right_coords,left_xyz,right_xyz):
         print(f"{l_xyz} || {r_xyz}")
     
 
-
 def plot_3d_reconstruction(left_xyz, right_xyz):
     """
     Plot 3D reconstruction of left and right image points.
@@ -246,7 +245,7 @@ def plot_3d_reconstruction(left_xyz, right_xyz):
     left_xyz (list): List of left image 3D coordinates.
     right_xyz (list): List of right image 3D coordinates.
     """
-    
+
     fig = plt.figure(figsize=(10, 5))
     ax1 = fig.add_subplot(121, projection='3d')
     ax2 = fig.add_subplot(122, projection='3d')
