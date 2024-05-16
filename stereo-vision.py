@@ -5,8 +5,7 @@ UDEM
 Dr. Andrés Hernández Gutiérrez
 
 stereo-vision
-How to use:
-
+How to use it:
 $ python stereo-vision.py --l_img left_infrared_image.png --r_img right_infrared_image.png
 """
 
@@ -20,6 +19,12 @@ import matplotlib.tri as mtri
 
 
 def read_parse_images()->argparse.ArgumentParser:
+    """
+    Parse command-line arguments for left and right image paths.
+
+    Returns:
+    argparse.ArgumentParser: Parsed arguments containing paths to left and right images.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('--l_img', 
                         type=str, 
@@ -32,7 +37,16 @@ def read_parse_images()->argparse.ArgumentParser:
     args=parser.parse_args()
     return args
 
+
 def display_images(left_image_path: str, right_image_path: str):
+    """
+    Display left and right images.
+
+    Args:
+    left_image_path (str): Path to the left image.
+    right_image_path (str): Path to the right image.
+    """
+
     left_img = cv.imread(left_image_path)
     right_img = cv.imread(right_image_path)
     
@@ -49,6 +63,17 @@ def display_images(left_image_path: str, right_image_path: str):
 
 
 def on_mouse_click(event, x, y, flags, param):
+    """
+    Handle mouse clicks on the images.
+
+    Args:
+    event: The event triggered by the mouse click.
+    x (int): The x-coordinate of the mouse click.
+    y (int): The y-coordinate of the mouse click.
+    flags: Any flags associated with the mouse click event.
+    param (dict): Dictionary containing images, coordinates, and side information.
+    """
+
     left_img, right_img = param["images"]
     left_coords, right_coords = param["coords"]
     
@@ -73,18 +98,46 @@ def on_mouse_click(event, x, y, flags, param):
 
 
 def draw_message(message):
+    """
+    Display a message window.
+
+    Args:
+    message (str): The message to be displayed.
+    """
+
     message_window = np.zeros((100, 800, 3), dtype=np.uint8)
     cv.putText(message_window, message, (20, 50), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv.LINE_AA)
     cv.imshow("Message", message_window)
 
 
 def draw_red_dot(image_name, point, left_img, right_img):
+    """
+    Draw a red dot on the specified image.
+
+    Args:
+    image_name (str): Name of the image ('left' or 'right').
+    point (tuple): Coordinates of the point where the dot should be drawn.
+    left_img: The left image.
+    right_img: The right image.
+    """
+
     image = left_img if image_name == 'left' else right_img
     cv.circle(image, point, 5, (0, 0, 255), -1)
     cv.imshow("Left Image" if image_name == 'left' else "Right Image", image)
 
 
 def collect_coordinates(left_image_path: str, right_image_path: str):
+    """
+    Collect coordinates from user mouse clicks on left and right images.
+
+    Args:
+    left_image_path (str): Path to the left image.
+    right_image_path (str): Path to the right image.
+
+    Returns:
+    tuple: Lists of left and right coordinates.
+    """
+
     left_coords = []
     right_coords = []
 
@@ -115,7 +168,19 @@ def collect_coordinates(left_image_path: str, right_image_path: str):
     cv.destroyAllWindows()
     return left_coords, right_coords
 
+
 def compute_xyz(left_coords, right_coords):
+    """
+    Compute 3D coordinates (X, Y, Z) from left and right image coordinates.
+
+    Args:
+    left_coords (list): List of left image coordinates.
+    right_coords (list): List of right image coordinates.
+
+    Returns:
+    tuple: Lists of left and right image 3D coordinates.
+    """
+
     camera_params = {
         "baseline": 94.926,
         "rectified_fx": 648.52,
@@ -152,7 +217,18 @@ def compute_xyz(left_coords, right_coords):
 
     return left_xyz,right_xyz
 
+
 def print_coordinates(left_coords, right_coords,left_xyz,right_xyz):
+    """
+    Print left and right image coordinates and their corresponding 3D coordinates.
+
+    Args:
+    left_coords (list): List of left image coordinates.
+    right_coords (list): List of right image coordinates.
+    left_xyz (list): List of left image 3D coordinates.
+    right_xyz (list): List of right image 3D coordinates.
+    """
+
     print("LEFT COORDS || RIGHT COORDS")
     for left, right in zip(left_coords, right_coords):
         print(f"{left} || {right}")
@@ -163,6 +239,14 @@ def print_coordinates(left_coords, right_coords,left_xyz,right_xyz):
 
 
 def plot_3d_reconstruction(left_xyz, right_xyz):
+    """
+    Plot 3D reconstruction of left and right image points.
+
+    Args:
+    left_xyz (list): List of left image 3D coordinates.
+    right_xyz (list): List of right image 3D coordinates.
+    """
+    
     fig = plt.figure(figsize=(10, 5))
     ax1 = fig.add_subplot(121, projection='3d')
     ax2 = fig.add_subplot(122, projection='3d')
